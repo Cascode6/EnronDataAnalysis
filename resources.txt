@@ -24,3 +24,19 @@ http://scikit-learn.org/stable/auto_examples/ensemble/plot_adaboost_multiclass.h
 
 http://stackoverflow.com/questions/34173101/numpy-dot-typeerror-cannot-cast-array-data-from-dtypefloat64-to-dtypes32
 http://stackoverflow.com/questions/28546843/class-weigths-in-claserization-in-lib-scikit-python
+
+http://stackoverflow.com/questions/36584873/python-sklearn-order-of-pipeline-operation-with-minmaxscaler-and-svc:
+http://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.RobustScaler.html#sklearn.preprocessing.RobustScaler
+http://scikit-learn.org/stable/auto_examples/feature_stacker.html#example-feature-stacker-py
+
+http://scikit-learn.org/stable/modules/generated/sklearn.metrics.make_scorer.html
+
+Extremely helpful for quickly checking grid search scores:
+https://civisanalytics.com/blog/data-science/2016/01/06/workflows-python-using-pipeline-gridsearchcv-for-compact-code/
+https://discussions.udacity.com/t/gridsearchcv-and-stratifiedshufflesplit-giving-indexerror-list-index-out-of-range/39018/2
+
+http://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html#example-model-selection-plot-confusion-matrix-py
+
+http://stackoverflow.com/questions/28144006/understanding-undefinedmetricwarning-in-classification-report-with-scikit-learn
+http://stackoverflow.com/questions/31677218/scikit-f-score-metric-error
+http://scikit-learn.org/stable/modules/outlier_detection.html

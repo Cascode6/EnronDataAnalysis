@@ -25,6 +25,10 @@ aS'from_messages'
 p12
 aS'shared_receipt_with_poi'
 p13
-aS'to_emails_poi_ratio'
+aS'multiplied_stock'
 p14
+aS'exercised_stock_sq'
+p15
+aS'to_emails_poi_ratio'
+p16
 a.

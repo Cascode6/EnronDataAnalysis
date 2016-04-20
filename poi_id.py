@@ -53,6 +53,8 @@ data_dict.pop('THE TRAVEL AGENCY IN THE PARK', 0)
 
 
 ### Task 3: Create new feature(s)
+
+# email to/from poi ratio
 def makeFraction(poi, total):
     if poi != "NaN" and total != "NaN":
         converted_poi = float(poi)
@@ -67,12 +69,26 @@ for person in data_dict:
     sent_to_poi = data_dict[person]["from_this_person_to_poi"]
     sent_total = data_dict[person]["from_messages"]
     recieved_total = data_dict[person]["to_messages"]
-
+    
+    #financial stat based on stock
+    ts = data_dict[person]["total_stock_value"]
+    eso = data_dict[person]["exercised_stock_options"]
+    
+    
     data_dict[person]["from_emails_poi_ratio"] = makeFraction(sent_from_poi,
                                                               recieved_total)
     data_dict[person]["to_emails_poi_ratio"] = makeFraction(sent_to_poi, 
                                                             sent_total)
     
+    if ts not in ["NaN", 0] and eso not in ["NaN", 0]:
+        data_dict[person]["multiplied_stock"] = ts * eso
+        data_dict[person]["exercised_stock_sq"] = eso^2
+    else:
+        data_dict[person]["multiplied_stock"] = "NaN"
+        data_dict[person]["exercised_stock_sq"] = "NaN"
+
+features_list.append("multiplied_stock")
+features_list.append("exercised_stock_sq")
 features_list.append("from_emails_poi_ratio")
 features_list.append("to_emails_poi_ratio")
 
@@ -104,85 +120,8 @@ labels, features = targetFeatureSplit(data)
 ### you'll need to use Pipelines. For more info:
 ### http://scikit-learn.org/stable/modules/pipeline.html
 
-
-#### for visualizing the actual and predicted outcomes
-###gets passed the testing data and labels, the clf prediction, and
-#  a list of lists containing the used features, their index point &
-#  their informational importance from get_Importances()
-#  can be used with changing no.s of features
-def visualizeData(features_test, labels_test, features_used, prediction):
-    counter = 0
-    print "No. of features used:",len(features_used)
-    point1 = features_used[0]
-    point2 = features_used[1]
-    for feat in features_used: #compare the importances
-        print feat[2]
-        if feat[2] > point2[2]:
-            if feat[2] > point1[2]:
-                point1 = feat
-            else:
-                point2 = feat
-        else:
-            pass
-    print point1[0], point1[2], point2[0], point2[2]
-    p1index = point1[1] #set the index point for use with features_test
-    p2index = point2[1]
-    
-    for data_point in features_test: #iterates through each observations' feature array
-        if labels_test[counter] == 0.:
-            clr = "blue";
-        elif labels_test[counter] == 1.:
-            clr = "red" #sets color by actual POI id
-        plt.scatter( data_point[p1index], data_point[p2index], color = clr)
-        counter += 1
-
-    plt.xlabel(point1[0])
-    plt.ylabel(point2[0])
-    plt.show()
-
-    try: 
-        counter = 0
-        for data_point in features_test:
-            if prediction[counter] == 0.:
-                clr = "blue";
-            elif prediction[counter] == 1.:
-                clr = "red" #sets color by predicted POI id
-            plt.scatter( data_point[p1index], data_point[p2index], color = clr)
-            counter += 1
-            
-        plt.xlabel(point1[0])
-        plt.ylabel(point2[0])
-        plt.show()
-    except NameError:
-        pass
-    return None
-
-
-#allows for a comparison between feature Nan ratio and classifier importance
-def get_Importances(classifier, filter):
-    print "************************************" #for console log
-    counter = 0
-    true_counter = -1
-    features_used = []
-    importances = classifier.feature_importances_ #importance of features used
-    for i in filter.get_support(): #whether feature was used or not
-        if i == True:
-            true_counter += 1
-            print features_list[counter], importances[true_counter]
-            features_used.append([features_list[counter], 
-                                  counter,
-                                  classifier.feature_importances_[true_counter]])
-        else:
-            pass
-        counter += 1
-    print "************************************"
-    return features_used
-
-# Provided to give you a starting point. Try a variety of classifiers.
-from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import AdaBoostClassifier
-
-clf = AdaBoostClassifier(learning_rate = 0.3, n_estimators = 100)
+from sklearn.preprocessing import MinMaxScaler, RobustScaler
 
 ### Task 5: Tune your classifier to achieve better than .3 precision and recall 
 ### using our testing script. Check the tester.py script in the final project
@@ -191,17 +130,11 @@ clf = AdaBoostClassifier(learning_rate = 0.3, n_estimators = 100)
 ### stratified shuffle split cross validation. For more info: 
 ### http://scikit-learn.org/stable/modules/generated/sklearn.cross_validation.StratifiedShuffleSplit.html
 
-# # # Example starting point. Try investigating other evaluation techniques!
-# from sklearn.cross_validation import train_test_split
-# features_train, features_test, labels_train, labels_test = \
-#     train_test_split(features, labels, test_size=0.1, random_state=42)
-
-#taken from tester.py, adusted for better results
+#taken from tester.py and tuned
 from sklearn.cross_validation import StratifiedShuffleSplit
-cv = StratifiedShuffleSplit(labels, 
-                            n_iter=100000, #tuned
-                            test_size=0.05,#tuned
-                            random_state = 42)
+cv = StratifiedShuffleSplit(labels,         
+                            test_size=0.2,         
+                            random_state = 66)
 for train_idx, test_idx in cv: 
         features_train = []
         features_test  = []
@@ -214,90 +147,19 @@ for train_idx, test_idx in cv:
             features_test.append( features[jj] )
             labels_test.append( labels[jj] )
 
-from sklearn.feature_selection import SelectFromModel
-from sklearn.pipeline import Pipeline, make_pipeline
+from sklearn.pipeline import Pipeline
 from sklearn.decomposition import PCA
+from sklearn.metrics import classification_report
 
 
-#AdaBoostClassifier and SelectFromModel Pipeline
-sfm = SelectFromModel(clf)
-sfm.fit_transform(features_train, labels_train)
-PipeSelect = Pipeline([("select_from_model", sfm), ("adaboost", clf)])
-t0 = time()
-PipeSelect.fit(features_train, labels_train)
-print "SFM training time:", round(time() - t0, 3), "s"
-prediction = PipeSelect.predict(features_test)
-print "SFM Score:", PipeSelect.score(features_test, labels_test)
-
-#check the results
-features_used = get_Importances(clf, sfm)
-visualizeData(features_test, labels_test, features_used, prediction)
-
-################# feature/classifier selection process used ############
-# from sklearn.feature_selection import SelectPercentile, SelectKBest
-# ### Report Investigations with Base
-# base_DT.fit(features_train, labels_train)
-# print "Base DT accuracy:", base_DT.score(features_test, labels_test)
-# base_ada.fit(features_train, labels_train)
-# print "Base ADA accuracy:", base_ada.score(features_test, labels_test)
-
-# FilterModelDT = SelectFromModel(base_DT)
-# FilterModelAda = SelectFromModel(base_ada)
-# t0 = time()
-# FilterModelDT.fit_transform(features_train,labels_train)
-# print "DTModel fit time:", round(time() - t0, 3), "s"
-# t0 = time()
-# FilterModelAda.fit_transform(features_train,labels_train)
-# print "AdaModel fit time:", round(time() - t0, 3), "s"
-
-# percent = 10
-# FilterPercentile = SelectPercentile(percentile=percent)
-# t0 = time()
-# FilterPercentile.fit_transform(features_train,labels_train)
-# print "Percentile training time:", round(time() - t0, 3), "s"
-
-# K = 2
-# FilterKBest = SelectKBest(k=K)
-# t0=time()
-# FilterKBest.fit_transform(features_train,labels_train)
-# print "KBest training time:", round(time() - t0, 3), "s"
-
-# def do_PCA(n_comps):
-#     pca = PCA(n_components = n_comps)
-#     pca.fit_transform(features_train, labels_train)
-#     return pca
-    
-# n_comps = 2
-# t0 = time()
-# pca = do_PCA(n_comps)
-# print "PCA training time:", round(time() - t0, 3), "s"
-
-# filters = [FilterPercentile, 
-#            FilterKBest,
-#            pca]
-
-# dt_pipeline = make_pipeline(FilterModelDT, base_DT)
-# dt_pipeline.fit(features_train, labels_train)
-# print FilterModelDT, "Accuracy DT:", dt_pipeline.score(features_test, labels_test)
-# print "*****************************"
-# dt_pipeline = make_pipeline(FilterModelAda, base_ada)
-# dt_pipeline.fit(features_train, labels_train)
-# print FilterModelAda, "Accuracy ADA:", dt_pipeline.score(features_test, labels_test)
-# print "*****************************"
-
-# for i in filters:
-#     dt_pipeline = make_pipeline(i, base_DT)
-#     dt_pipeline.fit(features_train, labels_train)
-#     print i, "Accuracy DT:", dt_pipeline.score(features_test, labels_test)
-#     print "*****************************"
-#     ada_pipeline = make_pipeline(i, base_ada)
-#     ada_pipeline.fit(features_train, labels_train)
-#     print i, "Accuracy ADA:", ada_pipeline.score(features_test, labels_test)
-#     print "*****************************"
-    
-    
-# clf = make_pipeline(pca, base_DT)
-# clf.fit(features_train, labels_train)
+#AdaBoost and PCA pipeline
+AdaPCA = Pipeline([("pca", PCA(n_components=3)),
+                 ("ada", AdaBoostClassifier())])
+clf = AdaPCA.fit(features_train, labels_train)
+print 'Ada/PCA'
+print classification_report(labels_test, clf.predict(features_test))
+print ''
+test_classifier(clf, my_dataset, features_list)
 
 
 ### Task 6: Dump your classifier, dataset, and features_list so anyone can

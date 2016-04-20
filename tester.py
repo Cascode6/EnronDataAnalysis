@@ -10,6 +10,7 @@
     that process should happen at the end of poi_id.py
 """
 from time import time
+import numpy as np
 
 import pickle
 import sys
@@ -44,7 +45,10 @@ def test_classifier(clf, dataset, feature_list, folds = 1000):
             labels_test.append( labels[jj] )
         
         ### fit the classifier using training set, and test on test set
+        ####Edited in accordance with forum post https://discussions.udacity.com/t/gridsearchcv-and-stratifiedshufflesplit-giving-indexerror-list-index-out-of-range/39018/2
+        
         clf.fit(features_train, labels_train)
+        
         predictions = clf.predict(features_test)
         for prediction, truth in zip(predictions, labels_test):
             if prediction == 0 and truth == 0:
