@@ -14,8 +14,7 @@
             <p>The Enron dataset serving as the basis of this project contains, raw, 
                 <blockquote><code>Number of observations: 146<br>
                     Number of POI's: 18<br>
-                    Number of available features: 21<br>
-                    Total number of cells: 3066</code></blockquote> 
+                    Number of available features: 21<br></code></blockquote> 
             This dataset poses some very specific challenges to a machine learning algorithm.</p><p>One professional use case of training and tuning a classifier on this data would likely be for someone - say, a prosecuting governmental agency - to identify suspects connected with Enron fraud for investigation. In this case, under-identifying POIs would be much preferable to over-identifying; if the algorithm spits out a name for investigation, you'd want to be especially sure that an identified name truly is a POI. This would be reflected in a high precision score.</p>
             <p>The biggest challenge, however, and why the Enron dataset is such a good training ground for ML, is size. Not only do we have a small number of observations (people) in the dataset, but we have an even smaller number of target observations (persons of interest, or POIs). Any predictions we make are in danger of under-classifying datapoints as POI and over-classifying as not POI. What this means for this analysis is that recall scores may be 'stickier', or harder to affect, for this dataset. If our goal is to identify ALL POI's or find the best model to predict fraudulent behavior in the future, recall scores need to be maximized as well.</p>
             <p>Another challenge inherent to this dataset is the data's "outlier"y nature. From the acompanying info sheet about Enron employees' financial data, its clear that while some POIS are associated with data points (salary, for example) that are far outside the quantiles, others are associated with average or below average points. To recognize meaningful and accurate trends in the data, its important to preserve this spread. This being said, I noticed two observations on the financial info sheet: "Total" and "The Travel Agency In The Park." Total is simply the sum for each category for all employees' data, and The Travel Agency in the Park would probably be a company either involved with or managed by Enron. Since I am trying to identify Persons of Interest, and neither of these are people, I removed them from the dataset.</p>
@@ -24,184 +23,121 @@
             <h1>Feature Description and Selection</h1>
             <h4>Types of Features</h4>
             <p>The features in this dataset are all numerical values, save for "email address", a string, which I discarded. The other features fall into three categories: financial data, email data, and POI status. Financial features contain the actual dollar values for items like an employee's salary and bonus. The full set contains: <b>['salary', 'deferral_payments', 'total_payments', 'loan_advances', 'bonus', 'restricted_stock_deferred', 'deferred_income', 'total_stock_value', 'expenses', 'exercised_stock_options', 'other', 'long_term_incentive', 'restricted_stock', 'director_fees']</b>The email features are computed values, based on a textual analysis of the email corpus done by Udacity, and represent the count of that particular feature for each person. The full set (again, minus the string for email address): <b>['to_messages', 'from_poi_to_this_person', 'from_messages', 'from_this_person_to_poi', 'poi', 'shared_receipt_with_poi']</b>. POI status was one feature, marking whether or not the person was suspected, convicted, or testified in exchange for immunity in relation to the Enron fraud investigation,with either a 1 marking the person as a POI or a 0 marking them as not of interest.</p>
-            <p>
-            <h4>Manual Evaluation</h4>
-            <p>After removing the outliers, I was left with <b>144 observations</b> with <b>20 features</b> for a total <b>2880 data points</b>. I still had <b>18 POIs</b> to work with. My goal was, again, to preserve as much spread and information density in this small dataset as possible, so that I ended up with the most robust classifier possible.</p>
-            <p>From the research I did on how Enron fraud was both perpetrated and concealed in the company's history, I developed a hypothesis. Most instances of misappropriated funds seemed to stem not from an initial active fraud, but from trying to cover up the activity - buying off partners, hiding money in expensive office furnishings, and otherwise bribing/incriminating anyone who may have reported the fraudulent activities of the company's CEO and chief financial officer. If that hypothesis was accurate, we'd expect POIs to communicate more with other POIs than non-POIs.</p>
-            <p>To investigate this hypothesis, I added two features to the current list: the ratio of 'from_poi_to_this_person' to total emails to this person, and the ratio 'from_this_person_to_poi' to total emails sent by this person. A higher number for either would, if we reject the null, indicate higher connection with POI's.</p>
-            <p>While working on tuning the Select method, detailed below, I noticed that a few features were routinely being selected for having a high importance to the classifiers. These features were <b>"exercised_stock_options"</b> and <b>"total_stock_options"</b>. It seemed POI's consistently had higher stock values overall and had much more exercised stock than restricted stock. Based on this, I made two variables: <b>"multiplied_stock"</b>, the total stock value multiplied by the exercised stock options, and <b>"exercised_stock_sq"</b>, the square of the exercised stock options. I hoped that this would amplify the intuitive trend for quantitative assessment during automated feature selection. I eventually utilized a PCA model, however I know that 'from_emails_poi_ratio' did not pass the NaN threshold.</p>
-            <h4>Scaling, PCA and SelectKBest</h4>
-            <p>After some introductory graphs made it clear that the feature trends were not linearly separable, I tested PCA and SelectKBest each with the AdaBoost classifier and KMeans classifier, using the metrics.classification_report module to get more information than the typical accuracy score. Results below:</p>
             
-            <code>
-                <table>
-                    <tr>
-                        <th>Classifier</th>
-                        <th>Class</th>
-                        <th>Precision</th>
-                        <th>Recall</th>
-                        <th>F1</th>
-                        <th>Support</th>
-                    </tr>
-                    <tr>
-                        <td>Ada/PCA</td>
-                        <td>0.0</td>
-                        <td>0.92</td>
-                        <td>0.96</td>
-                        <td>0.94</td>
-                        <td>25</td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                        <td>1.0</td>
-                        <td>0.67</td>
-                        <td>0.50</td>
-                        <td>0.57</td>
-                        <td>4</td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                        <td>av/tot</td>
-                        <td>0.89</td>
-                        <td>0.90</td>
-                        <td>0.89</td>
-                        <td>29</td>
-                    </tr>
-                    <tr>
-                        <td>KMeans/PCA</td>
-                        <td>0.0</td>
-                        <td>0.89</td>
-                        <td>1.00</td>
-                        <td>0.94</td>
-                        <td>25</td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                        <td>1.0</td>
-                        <td>1.00</td>
-                        <td>0.25</td>
-                        <td>0.40</td>
-                        <td>4</td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                        <td>av/tot</td>
-                        <td>0.91</td>
-                        <td>0.90</td>
-                        <td>0.87</td>
-                        <td>29</td>
-                    </tr>
-                    <tr>
-                        <td>Ada/SKB, k=3</td>
-                        <td>0.0</td>
-                        <td>0.88</td>
-                        <td>0.92</td>
-                        <td>0.90</td>
-                        <td>25</td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                        <td>1.0</td>
-                        <td>0.33</td>
-                        <td>0.25</td>
-                        <td>0.29</td>
-                        <td>4</td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                        <td>av/tot</td>
-                        <td>0.81</td>
-                        <td>0.83</td>
-                        <td>0.82</td>
-                        <td>29</td>
-                    </tr>
-                    <tr>
-                        <td>KM/SKB k=3</td>
-                        <td>0.0</td>
-                        <td>0.89</td>
-                        <td>1.00</td>
-                        <td>0.94</td>
-                        <td>25</td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                        <td>1.0</td>
-                        <td>1.00</td>
-                        <td>0.25</td>
-                        <td>0.40</td>
-                        <td>4</td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                        <td>av/tot</td>
-                        <td>0.91</td>
-                        <td>0.90</td>
-                        <td>0.87</td>
-                        <td>29</td>
-                    </tr></table>
-                    </code>
-            As you can see, while the scores associated with SelectKBest (at k = 3) are higher across the board, the occasional precision or recall of 1 indicates that these models are overfitting to the data. That leaves us with the AdaBoost classifier, and of the two, PCA produced the better scores.</p><p>I attempted no scaling with the SelectKBest model, but with the PCA model, I attempted both RobustScaler and MinMaxScaler. Results:
-                <table>
-                    <tr>
-                        <th>Classifier</th>
-                        <th>Class</th>
-                        <th>Precision</th>
-                        <th>Recall</th>
-                        <th>F1</th>
-                        <th>Support</th>
-                    </tr>
-                    <tr>
-                        <td>MinMaxScaler</td>
-                        <td>0.0</td>
-                        <td>0.86</td>
-                        <td>0.96</td>
-                        <td>0.91</td>
-                        <td>25</td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                        <td>1.0</td>
-                        <td>0</td>
-                        <td>0</td>
-                        <td>0</td>
-                        <td>4</td>
-                    </tr>
-                    <tr>
-                        <td>RobustScaler</td>
-                        <td>0.0</td>
-                        <td>0.88</td>
-                        <td>0.84</td>
-                        <td>0.86</td>
-                        <td>25</td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                        <td>1.0</td>
-                        <td>0.20</td>
-                        <td>0.25</td>
-                        <td>0.22</td>
-                        <td>4</td>
-                    </tr>
-                </table> As you can see, the scalers negatively impacted the model's predictive power. A round with test_classifier confirmed this, and so no scaling was used.</p>
+            <h4>Manual Feature Filtering</h4>
+            <p>After removing the outliers, I was left with 144 observations with 19 features each to use with a classifier, “poi” excluded as the label feature. <br>
+
+                <code>features_list = ['poi',
+                                'salary', 
+                                'deferral_payments', 
+                                'total_payments', 
+                                'loan_advances', 
+                                'bonus', 
+                                'restricted_stock_deferred', 
+                                'deferred_income', 
+                                'total_stock_value', 
+                                'expenses', 
+                                'exercised_stock_options', 
+                                'other', 
+                                'long_term_incentive', 
+                                'restricted_stock', 
+                                'director_fees',
+                                'to_messages',
+                                'from_poi_to_this_person', 
+                                'from_messages', 
+                                'from_this_person_to_poi', 
+                                'shared_receipt_with_poi'
+                                ]</code><br>
+
+            For all features, I opted to implement a manual filter. This data is clustered and not particularly linearly related, but I knew many of the features consisted of lots of NaN. I did not want a classifier to make decisions based on missing information — what if “loan_advances” was assigned a high importance score, but was over 90% “NaN” entries? That would not lead to confident conclusions about the actual importance of someone’s loan advancement behavior to their likelihood of committing fraud.</p>
+            
+            <p>After implementing an “NaN” percentage scorer, I filtered all features by their NaN density and passed all that were above 60% valid entries (a nan ratio of > 0.4) to my classifiers.</p>
+            
+            <p>From the research I did on how Enron fraud was both perpetrated and concealed in the company's history, I developed a hypothesis. Most instances of misappropriated funds seemed to stem not from an initial active fraud, but from trying to cover up the activity - buying off partners, hiding money in expensive office furnishings, and otherwise bribing/incriminating anyone who may have reported the fraudulent activities of the company's CEO and chief financial officer. If that hypothesis was accurate, we'd expect POIs to communicate more with other POIs than non-POIs.</p>
+            
+            <p>To investigate this hypothesis, I added two features to the current list: the ratio of 'from_poi_to_this_person' to total emails to this person, and the ratio 'from_this_person_to_poi' to total emails sent by this person. A higher number for either would indicate higher connection with POI’s. After passing all features through NAN filtering, I had to discard the “from_emails_poi_ratio”. My other feature, “to_emails_poi_ratio”, recieved a SelectKBest score of <b>8.24301643826</b> in my final model.</p>
+            
+            <p> While experimenting with a SelectFromModel filter, which I later moved away from in my final analysis, I noticed that a few features were routinely being selected for having a high importance to the classifiers. These features were “exercised_stock_options” and "total_stock_options". It seemed POI's consistently had higher stock values overall and had much more exercised stock than restricted stock. Based on this, I made two variables: "multiplied_stock", the total stock value multiplied by the exercised stock options, and “exercised_stock_sq", the square of the exercised stock options. I hoped that this would amplify this potential trend for quantitative assessment during automated feature selection. Both of these features made it past the NAN threshold of 0.4, and had importance scores of 18.3422491947 for multiplied_stock and 13.7140274662 for exercised_stock_squared -- the first and third highest importance scores of all features in my final model.</p>
+            
+            <p>After feature engineering and then NAN filtering, I was left with 15 features to test with.</p>
+            
+            <h4>Scaling</h4>
+            <p>PCA requires scaling, as does KNearestNeighbors, one of my three classifiers. I used robust_scaling to preserve the maximum amount of variance before both of these instances in my pipelines.</p>
+            
+            <h4>Automated Feature Selection/Creation: PCA and SelectKBest</h4>
+
+            <p>After checking the baseline testing scores of three different classifiers (see “choosing algorithm”), I utilized an iterative GridSearchCV to check for the best tuning and highest scoring across 6 different combinations of feature process and classifiers and 4 different metrics.</p>
+
+            <h5>PCA</h5>
+
+            <p>Rather than selecting existing features, PCA compresses all 15 into a number (n_components) of new features. I chose to investigate this method across n_components = [3, 5, 7] in comparison with a select model as the wide spread of data. No PCA models achieved the highest score in any metric.</p>
+
+            <h5>SelectKBest</h5>
+
+            <p>I tested SelectKBest with possible values of 3, 5, and 7, out of my 15 total features, because I wanted to keep the testing process simple yet inclusive. The overall highest scores I achieved via my GridSearch were associated with a pipeline using SelectKBest k = 5.</p>
+
         </section>
         <section>
-            <h1>The Classifier</h1>
-            <p>The two classifiers I tested were KMeans and AdaBoostClassifier. After testing both with the selection filters and untuned scores against tester.py, I decided to pursue the AdaBoost classifier as untuned it performed above the precision and recall 0.3 thresholds. Since the data is not especially linearly related or separable, I wanted to steer clear of SVMs or GaussianNB, and given the small size of the dataset and even smaller number of POIs, iterating over a large number of classifiers as AdaBoost does ensures balanced, robust predictions.
+            <h1>Classifier Selection</h1>
+
+            <p>In the same iterative GridSearch process, I tested three different classifiers: AdaBoost, KNeighbors, and RandomForest. I tested and tuned against all 15 of my features across the scoring parameters "accuracy", "precision", "recall", and "f1", and selected based on the highest tester.y scores for those top 4 pipelines.</p>
+
+            <h4>AdaBoost</h4>
+
+            <p>The baseline scores for an untuned AdaBoostClassifier were:<br>
+
+            <code>Accuracy: 0.84627	Precision: 0.40154	Recall: 0.31200	F1: 0.35115</code><br>
+
+            Already above the project requirements. Promising results. In GridSearchCV, I tuned the parameters learning_rate across [.5, 1, 1.5], and n_estimators across [20, 50, 100].</p>
+
+            <h4>KNeighbors</h4>
+
+            <p>The baseline scores for an untuned (RobustScaled) KNeighborsClassifier were:<br>
+
+            <code>Accuracy: 0.86493	Precision: 0.47400	Recall: 0.11850	F1: 0.18960</code><br>
+
+            Low recall, but promising precision. This could be resolved with the proper tuning. I tuned the parameters weights across ["uniform", "distance"] and n_neighbors across [3, 5, 7].</p>
+
+            <h4>RandomForest</h4>
+
+            <p>The baseline scores for an untuned RandomForestClassifier were:<br>
+
+            <code>Accuracy: 0.86527	Precision: 0.48564	Recall: 0.17750	F1: 0.25998</code><br>
+
+            Again, the low recall score isn’t promising, but given more iterations, it could still prove a good fit for our data. I tuned n_estimators across [5, 10, 20] and class_weight across[None, "balanced"].</p>
             </p>
         </section>
         <section>
-            <h1>Philosophy of Tuning</h1>
+            <h1>Classifier Selection and Tuning</h1>
             <h4>Tuning an Algorithm</h4>
             <p>To tune an algorithm is to adjust the parameters of the classifier from the default in the pursuit of "the best classifier". For classifiers such as SVM, you can adjust the penalty for wrong guesses, prioritizing accuracy vs. prioritizing easily communicable or quickly reached results, or the type of decision your classifier is making. Every dataset is different, and every situation is different - picking the one that is "The Best" will always be a unique and specific exercise to your situation.</p>
             <p>I mentioned briefly, in the intro, the importance recall has to the most obvious use of this data, to identify potential signs of fraud in a person's emails and financial data. Accuracy would be misleading in this situation, so to achieve this, I specified my GridSearch scorer function to be "recall" rather than accuracy.</p>
-            <h4>AdaBoost Tuning</h4>
-            <p>I implemented GridSearchCV in order to tune both feature selection and the AdaBoostClassifier. For my classifier, I started by tuning both learning_rate across <b>0.5, 1, 1.5, 2</b>, and n_estimators <b>50, 100, 200, 300</b>. I chose these values to cover as wide a spread as possible. However,when tested, the default parameters for AdaBoost and n_components = 3 for the PCA recieved the best scores.</p>
-            
+            <h4>GridSearch Results</h4>
+            <p>By creating an iterative GridSearchCV, I was able to pass in the list of pipelines to test and the scoring metrics by which to test them, and then return all tuned pipelines’ scores and select the best tuning per scoring metric.</p>
+
+            <p>The metrics I used in GridSearchCV’s scoring parameter were "accuracy", "precision", "recall", and “f1”. For all six pipelines tuned, the best pipelines per score metric were:<br>
+
+            Accuracy:<code>Pipeline(steps=[('select', SelectKBest(k=5, score_func=<function f_classif at 0x10db05668>)), ('scaler', RobustScaler(copy=True, with_centering=True, with_scaling=True)), ('knear', KNeighborsClassifier(algorithm='auto', leaf_size=30, metric='minkowski',
+           metric_params=None, n_jobs=1, n_neighbors=5, p=2,
+           weights='uniform'))])</code><br>
+
+            Precision:<code>Pipeline(steps=[('select', SelectKBest(k=5, score_func=<function f_classif at 0x10db05668>)), ('scaler', RobustScaler(copy=True, with_centering=True, with_scaling=True)), ('knear', KNeighborsClassifier(algorithm='auto', leaf_size=30, metric='minkowski',
+           metric_params=None, n_jobs=1, n_neighbors=5, p=2,
+           weights='uniform'))])</code><br>
+
+            Recall:<code>Pipeline(steps=[('select', SelectKBest(k=5, score_func=<function f_classif at 0x10db05668>)), ('scaler', RobustScaler(copy=True, with_centering=True, with_scaling=True)), ('knear', KNeighborsClassifier(algorithm='auto', leaf_size=30, metric='minkowski',
+           metric_params=None, n_jobs=1, n_neighbors=3, p=2,
+           weights='distance'))])</code><br>
+
+            F1:<code>Pipeline(steps=[('select', SelectKBest(k=5, score_func=<function f_classif at 0x10db05668>)), ('scaler', RobustScaler(copy=True, with_centering=True, with_scaling=True)), ('knear', KNeighborsClassifier(algorithm='auto', leaf_size=30, metric='minkowski',
+           metric_params=None, n_jobs=1, n_neighbors=3, p=2,
+           weights='distance'))])</code><br></p>
+
         </section>
         <section>
             <h1>Validation</h1>
-            <p>Validation is the process by which we can guage the likelyhood that a particular statistical model is overfitting or underfitting a given dataset. For this dataset and model, this means using a Stratified Shuffle Split method of splitting data into separate testing banks and for validating the grid search.</p>
-            <p>Achieving valid results is the entire reason to undertake a project such as this, so using a method of validation is crucial. The first stages of informal development and investigation of this project utilized SKlearn's train_test_split function, which reserves a portion of the data for testing and allowing precise control over the train/test data ratio. However, the small dataset size made it necessary for tuning and feature selection to use SKlearn's StratifiedShuffleSplit. This ensured that train groups and test groups kept a proportionate number of target groups while prioritizing variance in data, and produced the best results.</p>
+            <p>Validation is the process of deciding if a given model is describing real trends and will generalize to new data. In the case of supervised learning challenges like the Enron data, one of the best methods of validation happens when a total dataset is split into a training set and a testing set. This is known as cross-validation. If a model is trained on the training set, and then performs well predicting across the testing set, the model is likely picking up on real trends in the data and is thus, a statistically meaningful and valid model.</p>
+            <p>Achieving valid results is the entire reason to undertake a project such as this, so using a method of validation is crucial. The small dataset size made it necessary for tuning and feature selection to use SKlearn's StratifiedShuffleSplit. This ensured that train groups and test groups kept a proportionate number of target groups while prioritizing variance in data, and produced the best results.</p>
             <p>An aspect of validation is balancing performance vs. validity. In the lessons, we looked at how at a certain ratio, results tend to plateau. I experimented with several different test sizes, starting at 0.1. I found that while training scores were best around 0.05, testing scores were highest at 0.2, so that is what I implemented for the dataset.
             </p>
         </section>
@@ -224,14 +160,21 @@
                 <li>F1: 2 * Precision * Recall  / Precision + Recall</li>
             </ol>
             <p>From these definitions, you can see how a high accuracy with this dataset can be misleading. With only 18 targets out of 144 options, the accuracy of simply always guessing non-POI would be 0.875 -- better than our unfiltered AdaBoost algorithm! However, with 0 true positives, both precision and recall would be scores of 0.</p>
+            <p>Since we're concerned with identifying as many POI's as possible, we want to prioritize recall. So, we select the tuned pipeline that produced the highest recall score based on our GridSearchCV.</p>
         </section>
         <section>
             <h1>Conclusion</h1>
-            <p>Using a StratifiedShuffleSplit dataset with a feature NaN threshold of 0.4 and a 0.2 testing set proportionally: <blockquote><code>Pipeline(steps=[('pca', PCA(copy=True, n_components=3, whiten=False)), ('ada', AdaBoostClassifier(algorithm='SAMME.R', base_estimator=None,
-          learning_rate=1.0, n_estimators=50, random_state=None))])
-	Accuracy: 0.85793	Precision: 0.45517	Recall: 0.3325F1: 0.38428	F2: 0.35144
-	Total predictions: 15000	True positives:  665	False positives:  796	False negatives: 1335	True negatives: 12204</code></blockquote>
-            What this means for my program is that 85% of the time, I correctly guessed the POI status of an individual. Of the people I guessed who were POI's, I got 45.5% of them right, and of all the POI's, I spotted 33.3% of them.</p><p>Next steps I would take for this project would be to compare a more complex sentiment map of the email corpus; maybe devise some features exploring how many emails about money, or about deals, were sent or recieved by POI status. Another would be to pull dates out from the emails, and see the rate at which POIs sent emails during certain periods associated with the start of specific fraudulent acts.</p>
+            <p>Using a StratifiedShuffleSplit dataset with a feature NaN threshold of 0.4 and a 0.2 testing set proportionally:<br>
+                <code>Pipeline(steps=[('select', SelectKBest(k=5, score_func=<function f_classif at 0x10db05668>)), ('scaler', RobustScaler(copy=True, with_centering=True, with_scaling=True)), ('knear', KNeighborsClassifier(algorithm='auto', leaf_size=30, metric='minkowski',
+           metric_params=None, n_jobs=1, n_neighbors=3, p=2,
+           weights='distance'))])
+            Accuracy: 0.88973	Precision: 0.63369	Recall: 0.41000	F1: 0.49787	F2: 0.44114
+            Total predictions: 15000	True positives:  820	False positives:  474	False negatives: 1180	True negatives: 12526
+
+            </code><br>
+    
+            What this means for my program is that ~89%% of the time, I correctly guessed the POI status of an individual. Of the people I guessed who were POI's, I got 63.4% of them right, and of all the POI's, I spotted 41% of them.</p>
+            <p>Next steps I would take for this project would be to compare a more complex sentiment map of the email corpus; maybe devise some features exploring how many emails about money, or about deals, were sent or recieved by POI status. Another would be to pull dates out from the emails, and see the rate at which POIs sent emails during certain periods associated with the start of specific fraudulent acts.</p>
         </section>
     </body>
 </html>

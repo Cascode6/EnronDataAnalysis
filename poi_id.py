@@ -92,10 +92,12 @@ features_list.append("exercised_stock_sq")
 features_list.append("from_emails_poi_ratio")
 features_list.append("to_emails_poi_ratio")
 
+
 ### Store to my_dataset for easy export below.
 removed_features = []
 nan_percents = {} #to compare against feature predictive power later
 for feature in features_list:
+    print feature
     total_nan = 0 
     total = 0
     for person in data_dict:
@@ -106,6 +108,8 @@ for feature in features_list:
     if nan_percents[feature] > 0.4:
         removed_features.append(feature)
         features_list.remove(feature)
+print removed_features
+pprint.pprint(nan_percents)
 
 my_dataset = data_dict
 
@@ -121,7 +125,8 @@ labels, features = targetFeatureSplit(data)
 ### http://scikit-learn.org/stable/modules/pipeline.html
 
 from sklearn.ensemble import AdaBoostClassifier
-from sklearn.preprocessing import MinMaxScaler, RobustScaler
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import RandomForestClassifier
 
 ### Task 5: Tune your classifier to achieve better than .3 precision and recall 
 ### using our testing script. Check the tester.py script in the final project
@@ -148,23 +153,155 @@ for train_idx, test_idx in cv:
             labels_test.append( labels[jj] )
 
 from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import RobustScaler
 from sklearn.decomposition import PCA
+from sklearn.feature_selection import SelectKBest
+from sklearn.grid_search import GridSearchCV
 from sklearn.metrics import classification_report
+print "n features", len(features_test[0])
+
+#AdaBoost vs. KNeighbors vs. RandomForest
+#and PCA vs. SelectPercentile
+t0 = time()
+print "****************************************"
+# Adaboost and PCA pipe
+BoosterPCA = Pipeline([("scaler", RobustScaler()),
+                     ("pca", PCA()), ("booster", AdaBoostClassifier())])
+BoosterPCA_params = {"pca__n_components": [3, 5, 7],
+                 "booster__learning_rate":[.5, 1, 1.5],
+                 "booster__n_estimators":[20, 50, 100]}
+
+# AdaBoost and Select
+BoosterPer = Pipeline([("select", SelectKBest()), ("booster", AdaBoostClassifier())])
+BoosterPer_params = {"select__k": [3, 5, 7],
+                    "booster__learning_rate":[.5, 1, 1.5],
+                    "booster__n_estimators":[20, 50, 100]}
+
+# KNearestNeighbors and PCA
+KNearPCA = Pipeline([("scaler", RobustScaler()),
+                     ("pca", PCA()), 
+                     ("knear", KNeighborsClassifier())])
+KNearPCA_params = {"pca__n_components": [3, 5, 7],
+                   "knear__weights": ["uniform", "distance"],
+                   "knear__n_neighbors":[3, 5, 7]}
+
+# KNearestNeighbors and Select
+KNearPer = Pipeline([("select", SelectKBest()), 
+                     ("scaler", RobustScaler()),
+                     ("knear", KNeighborsClassifier())])
+KNearPer_params = {"select__k": [3, 5, 7],
+                   "knear__weights": ["uniform", "distance"],
+                   "knear__n_neighbors":[3, 5, 7]}
+
+# RandomForest and PCA 
+RForPCA = Pipeline([("scaler", RobustScaler()),
+                     ("pca", PCA()), ("rforest", RandomForestClassifier())])
+RForPCA_params = {"pca__n_components": [3, 5, 7],
+                  "rforest__n_estimators":[5, 10, 20],
+                  "rforest__class_weight":[None, "balanced"]}
+
+# RandomForest and SelectPercentile
+RForPer = Pipeline([("select", SelectKBest()), ("rforest", RandomForestClassifier())])
+RForPer_params = {"select__k": [3, 5, 7],
+                  "rforest__n_estimators":[5, 10, 20],
+                  "rforest__class_weight":[None, "balanced"]}
+
+# create classifier/parameter dict list of lists 
+testPipes = [[BoosterPCA, BoosterPCA_params], 
+           [BoosterPer, BoosterPer_params], 
+           [KNearPCA, KNearPCA_params],
+           [KNearPer, KNearPer_params],
+           [RForPCA, RForPCA_params],
+           [RForPer, RForPer_params]]
 
 
-#AdaBoost and PCA pipeline
-AdaPCA = Pipeline([("pca", PCA(n_components=3)),
-                 ("ada", AdaBoostClassifier())])
-clf = AdaPCA.fit(features_train, labels_train)
-print 'Ada/PCA'
-print classification_report(labels_test, clf.predict(features_test))
-print ''
+testCls = [AdaBoostClassifier(),
+           (Pipeline([("scaler", RobustScaler()),
+                     ("knei", KNeighborsClassifier())])),
+           RandomForestClassifier()]
+
+for test in testCls:
+    cl = test.fit(features_train, labels_train)
+    print "------Base Classifier Score------"
+    print test
+    print classification_report(labels_test, cl.predict(features_test))
+    accuracy, precision, recall, f1 = test_classifier(cl, my_dataset, features_list)
+
+scoring = ["accuracy", "precision", "recall", "f1"]
+
+def getBestClassifier(testPipes, scoring):
+    top_scorers = []
+    for scorer in scoring:
+        best_classifiers = []
+        best_scores = []
+        # initialize grid search with pipeline (cl[0]) and parameters (cl[1])
+        for cl in testPipes:
+            grid = GridSearchCV(cl[0], param_grid = cl[1], cv = cv, scoring = scorer)
+            #based on https://discussions.udacity.com/t/gridsearchcv-and-stratifiedshufflesplit-giving-indexerror-list-index-out-of-range/39018/8?u=cfactoidal
+            estimator = grid.fit(features, labels)
+            print "-------Tuned Estimator-------"
+            print estimator.best_estimator_
+            print scorer, "score:", estimator.best_score_
+            best_classifiers.append(estimator.best_estimator_)
+            best_scores.append(estimator.best_score_)
+
+        best_score = max(best_scores)
+        best_score_index = best_scores.index(best_score)
+        print "--------------------------------"
+        print "Best", scorer, "scoring model:"
+        bestPipe = best_classifiers[best_score_index].fit(features_train, labels_train)
+        top_scorers.append(bestPipe)
+        print "GridSearchCV", scorer, "score:", best_score
+    return top_scorers
+
+top_scorers = getBestClassifier(testPipes, scoring)
+scores_by_model = []
+best_recall = 0
+counter = 0
+for est in top_scorers:
+    print "~~~~~~for", scoring[counter], ": ~~~~~~~~" 
+    real_accuracy, real_precision, real_recall, real_f1 = test_classifier(est, my_dataset, features_list)
+    if real_recall > best_recall:
+        best_recall = real_recall
+        clf = est
+    scores_by_model.append([est, real_accuracy, real_precision, real_recall, real_f1])
+    counter +=1
+
+#parse feature weights in case highest-performing recall score is PCA
+def getWeights(components, features_list):
+        counter = 0
+        while counter < 15:
+            print features_list[counter + 1], round(components[counter], 5)
+            counter = counter + 1
+        return None
+try:
+    imps = clf.named_steps["select"].scores_
+    counter = 1
+    for imp in imps:
+        print features_list[counter], imp
+        counter +=1
+except:
+    weights1 = Tested.named_steps["pca"].components_[0]
+    weights2 = Tested.named_steps["pca"].components_[1]
+    weights3 = Tested.named_steps["pca"].components_[2]
+    print "--------------------------------"
+    print "Feature weights in component 1:"
+    getWeights(weights1, features_list)
+    print "Feature weights in component 2:"
+    getWeights(weights2, features_list)
+    print "Feature weights in component 3:"
+    getWeights(weights3, features_list)
+
+print "****************************************"
+print "run time:", round(time() - t0, 3), "s"
+
+
+# ###Task 6: Dump your classifier, dataset, and features_list so anyone can
+# ###check your results. You do not need to change anything below, but make sure
+# ###that the version of poi_id.py that you submit can be run on its own and
+# ###generates the necessary .pkl files for validating your results.
+
+print "Best balanced estimator so far:"
 test_classifier(clf, my_dataset, features_list)
-
-
-### Task 6: Dump your classifier, dataset, and features_list so anyone can
-### check your results. You do not need to change anything below, but make sure
-### that the version of poi_id.py that you submit can be run on its own and
-### generates the necessary .pkl files for validating your results.
 
 dump_classifier_and_data(clf, my_dataset, features_list)

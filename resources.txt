@@ -40,3 +40,11 @@ http://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matr
 http://stackoverflow.com/questions/28144006/understanding-undefinedmetricwarning-in-classification-report-with-scikit-learn
 http://stackoverflow.com/questions/31677218/scikit-f-score-metric-error
 http://scikit-learn.org/stable/modules/outlier_detection.html
+
+#submit 3
+http://scikit-learn.org/stable/modules/generated/sklearn.neighbors.KNeighborsClassifier.html
+http://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html#sklearn.ensemble.RandomForestClassifier
+https://en.wikipedia.org/wiki/Cross-validation_%28statistics%29
+
+Helpful for answering univariate feature selection in regards to my PCA process
+http://stackoverflow.com/questions/23294616/how-to-use-scikit-learn-pca-for-features-reduction-and-know-which-features-are-d
