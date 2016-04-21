@@ -1,6 +1,6 @@
 # EnronDataAnalysis
 
-<h1>Enron Data Analysis with AdaBoost and SelectFromModel</h1>
+<h1>Enron Data Analysis</h1>
 
 The Enron email corpus is one of the most famous in data science and machine learning. My investigation of the features provided by Udacity's ML Final Project was an attempt to sift out meaningful trends and, notably, to achieve precision and recall scores above 0.3 -- this report will detail my process, results and commandline output towards those goals.
 
